@@ -595,3 +595,138 @@ def solve (n : Nat) := Id.run do
   return sum
 
 end PE.P30
+
+-- [#31 Coin sums](https://projecteuler.net/problem=31)
+namespace PE.P31
+open Std (HashMap)
+
+abbrev M := StateM $ HashMap (Nat × Nat) Nat
+
+def coins := #[1,2,5,10,20,50,100,200]
+
+partial def solveRec (i : Nat) (rem : Nat) : M Nat := do
+  if let some res := (← get).find? (i, rem) then
+    return res
+  else if h : i < coins.size then
+    let mut res ← solveRec (i+1) rem
+    if coins[i] <= rem then
+      res := res + (← solveRec i (rem - coins[i]))
+    modify (·.insert (i, rem) res)
+    return res
+  else
+    return if rem == 0 then 1 else 0
+
+def solve (n : Nat) := solveRec 0 n |>.run' HashMap.empty
+
+end PE.P31
+
+-- [#32 Pandigital products](https://projecteuler.net/problem=32)
+namespace PE.P32
+open Std (HashSet)
+
+def solve (n : Nat) := Id.run do
+  let mut set := HashSet.empty
+  for len1 in [1:5+1] do
+    for len2 in [len1:5+1] do
+      let lenProd := len1 + len2 - 1
+      let lenTotal := len1 + len2 + lenProd
+      if lenTotal != n then
+        continue
+      for y in [10^(len2-1):10^len2] do
+        let mut used := mkArray 10 false
+        let mut bad := false
+        for d in P13.getDigits y do
+          bad := bad || used.get! d || d == 0
+          used := used.set! d true
+        if bad then
+          continue
+        for x in [10^(len1-1):10^len1] do
+          let mut bad2 := false
+          let mut used2 := used
+          for d in P13.getDigits x do
+            bad2 := bad2 || used2.get! d || d == 0
+            used2 := used2.set! d true
+          if bad2 then
+            continue
+          let prod := x * y
+          for d in P13.getDigits prod do
+              bad2 := bad2 || used2.get! d || d == 0
+              used2 := used2.set! d true
+          if bad2 then
+            continue
+          set := set.insert prod
+  return set.toList.foldr (· + ·) 0
+
+end PE.P32
+
+-- [#33 Digit cancelling fractions](https://projecteuler.net/problem=33)
+namespace PE.P33
+open Std (HashSet)
+
+def mkFrac x y := let g := Nat.gcd x y; (x / g, y / g)
+
+def solve (n : Nat) := Id.run do
+  let mut prod := (1, 1)
+  for x in [10^(n-1):10^n] do
+    for y in [10^(n-1):10^n] do
+      if x >= y then
+        continue
+      let frac := mkFrac x y
+      if x % 10 == y / 10 && frac == mkFrac (x / 10) (y % 10) then
+        prod := mkFrac (prod.fst * x) (prod.snd * y)
+  return prod.snd
+
+end PE.P33
+
+-- [#34 Digit factorials](https://projecteuler.net/problem=34)
+namespace PE.P34
+
+abbrev M := ReaderT (Array (Nat × Nat)) Id
+
+partial def solveRec (cur : Array Nat) (sum : Nat) (prev : Nat) : M Nat := do
+  let mut res := 0
+  if cur.size > 1 && (P13.getDigits sum).qsort (· < ·) == cur then
+    res := res + sum
+  for (d, fact) in ← read do
+    if prev <= d && cur.size <= 5 then
+      res := res + (← solveRec (cur.push d) (sum + fact) d)
+  return res
+
+def factorials := Id.run do
+  let mut fact := #[(0, 1)]
+  for i in [1:10] do
+    fact := fact.push (i, fact[fact.size-1]!.snd * i)
+  return fact
+
+def solve (n : Nat) := (solveRec #[] 0 0).run factorials |>.max n -- max is just for using the argument.
+
+end PE.P34
+
+-- [#35 Circular primes](https://projecteuler.net/problem=35)
+namespace PE.P35
+open Std (HashSet)
+
+partial def digitLen n := if n < 10 then 1 else digitLen (n / 10) + 1
+
+def solve (n : Nat) := Id.run do
+  let primes := P7.sieve n
+  let primeSet := primes.foldl (·.insert ·) HashSet.empty
+  let mut len := 1
+  let mut tens := 1
+  let mut num := 0
+  for p in primes do
+    while tens * 10 <= p do
+      len := len + 1
+      tens := tens * 10
+    let mut ok := true
+    let mut x := p
+    for _ in [0:len-1] do
+      x := x / 10 + tens * (x % 10)
+      unless primeSet.contains x do
+        ok := false
+        break
+    if ok then
+      num := num + 1
+  return num
+
+end PE.P35
