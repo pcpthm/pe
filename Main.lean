@@ -3,28 +3,37 @@ import Lean
 
 open Lean
 open Lean.Parser.Term
+open Lean.Elab.Term
 
 class Answer (α : Type) where
   toString : α → IO String
 
-instance : Answer Nat := ⟨fun n => pure $ toString n⟩
+def problemNumbers := [1:15+1].toArray
 
-instance : Answer (IO Nat) := ⟨fun n => do Answer.toString (← n)⟩
-
-def problemNumbers := [1:11].toArray
-
-macro "getAnswerMatch%" : term => do
+elab "getAnswerMatch%" : term => do
   let mut alts := #[]
   for n in problemNumbers do
-    let nameSpace := (`PE).append s!"P{n}"
-    let answer := mkIdent (nameSpace.append "answer")
-    alts := alts.push $ ← `(matchAltExpr| | $(quote n) => Answer.toString $answer)
-  alts := alts.push $ ← `(matchAltExpr| | _ => pure "Not implemented")
-  `(fun $alts:matchAlt*)
+    let pe := (`PE).append s!"P{n}"
+    let n := quote n
+    let parse := pe.append "parse"
+    let solve := pe.append "solve"
+    let value ← if (← getEnv).contains parse then
+      `($(mkIdent solve) ($(mkIdent parse):ident lines) input)
+    else
+      `($(mkIdent solve) input)
+    alts := alts.push $ ← `(matchAltExpr| | $n => $value)
+  alts := alts.push $ ← `(matchAltExpr| | _ => panic! "Not implemented")
+  let stx ← `(fun n lines input => match n with $alts:matchAlt*)
+  return ← elabTerm stx none
 
-def getAnswer : Nat → IO String := getAnswerMatch%
+def getAnswer : Nat → Array String → Nat → Nat := getAnswerMatch%
 
 def main : IO Unit := do
+  let inputs ← (·.map (·.toNat!)) <$> IO.FS.lines ("data" / "input.txt")
   for n in problemNumbers do
-    let answer ← getAnswer n
+    let lines ← try
+      IO.FS.lines ("data" / s!"p{n}.txt")
+      catch _ => pure #[]
+    let input := inputs[n-1]!
+    let answer := getAnswer n lines input
     println! "Problem {n}: {answer}"

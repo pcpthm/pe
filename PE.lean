@@ -1,11 +1,10 @@
+import Std
 
 -- [#1 Multiples of 3 or 5](https://projecteuler.net/problem=1)
 namespace PE.P1
 
 def sum n m := let x := (n - 1) / m; x * (x + 1) / 2 * m
 def solve n := sum n 3 + sum n 5 - sum n (3 * 5)
-
-def answer := solve 1000
 
 end PE.P1
 
@@ -20,8 +19,6 @@ def solve n := Id.run do
       sum := sum + a
     (a, b) := (a + b, a)
   return sum
-
-def answer := solve 4000000
 
 end PE.P2
 
@@ -40,8 +37,6 @@ def solve n := Id.run do
     p := p + 1
   return max_p.max n
 
-def answer := solve 600851475143
-
 end PE.P3
 
 -- [#4 Largest palindrome product](https://projecteuler.net/problem=4)
@@ -55,7 +50,9 @@ def isParin x := Id.run do
     x := x / 10
   return digits == digits.reverse
 
-def solve lo up := Id.run do
+def solve k := Id.run do
+  let lo := 10^k
+  let up := 10^(k+1)
   let mut max := 0
   for x in [lo:up] do
     for y in [lo:up] do
@@ -63,8 +60,6 @@ def solve lo up := Id.run do
       if isParin prod then
         max := max.max prod
   return max
-
-def answer := solve 100 1000
 
 end PE.P4
 
@@ -81,16 +76,12 @@ def lcm (x y : Nat) := x * y / x.gcd y
 
 def solve n := [1:n+1].toArray |>.foldl lcm 1
 
-def answer := solve 20
-
 end PE.P5
 
 -- [#6 Sum square difference](https://projecteuler.net/problem=6)
 namespace PE.P6
 
 def solve n := [1:n+1].toArray.foldl (· + ·) 0 ^ 2 - [1:n+1].toArray.foldl (· + · ^ 2) 0
-
-def answer := solve 100
 
 end PE.P6
 
@@ -118,8 +109,6 @@ partial def loop k n :=
 
 def solve n := loop (n - 1) 1
 
-def answer := solve 10001
-
 end PE.P7
 
 def Char.isDigit? (self : Char) : Option Nat :=
@@ -131,12 +120,12 @@ def Char.isDigit? (self : Char) : Option Nat :=
 -- [#8 Largest product in a series](https://projecteuler.net/problem=8)
 namespace PE.P8
 
-def theNumbers : IO (Array Nat) := do
-  let string ← IO.FS.readFile ("data" / "p8.txt")
+def parse (lines : Array String) : Array Nat := Id.run do
   let mut res := #[]
-  for c in string.toList do
-    if let some d := c.isDigit? then
-      res := res.push d
+  for line in lines do
+    for c in line.toList do
+      if let some d := c.isDigit? then
+        res := res.push d
   return res
 
 def solve (numbers : Array Nat) (n : Nat) : Nat := Id.run do
@@ -145,8 +134,6 @@ def solve (numbers : Array Nat) (n : Nat) : Nat := Id.run do
     let prod := numbers[i:i+n].toArray.foldl (· * ·) 1
     max := max.max prod
   return max
-
-def answer := (solve · 13) <$> theNumbers
 
 end PE.P8
 
@@ -164,8 +151,6 @@ def solve (sum : Nat) := Id.run do
         return a * b * c
   return 0
 
-def answer := solve 1000
-
 end PE.P9
 
 -- [#10 Summation of primes](https://projecteuler.net/problem=10)
@@ -173,7 +158,143 @@ namespace PE.P10
 
 def solve n := P7.sieve n |>.foldl (· + ·) 0
 
-def answer := solve 2000000
-
 end PE.P10
 
+-- [#11 Largest product in a grid](https://projecteuler.net/problem=11)
+namespace PE.P11
+
+def parse (lines : Array String) : Array (Array Nat) :=
+  lines.map (·.split (· == ' ') |>.map (·.toNat!) |>.toArray)
+
+def prod : Array Nat → Nat := Array.foldl (· * ·) 1
+
+def solve (matrix : Array (Array Nat)) n := Id.run do
+  let h := matrix.size
+  let w := matrix[0]!.size
+  let mut max := 0
+  for i in [0:h] do
+    for j in [0:w] do
+      if i + n <= h then
+        max := max.max $ prod $ [0:n].toArray |>.map (matrix[i + ·]![j]!)
+      if j + n <= w then
+        max := max.max $ prod $ [0:n].toArray |>.map (matrix[i]![j + ·]!)
+      if i + n <= h && j + n <= w then
+        max := max.max $ prod $ [0:n].toArray |>.map (fun k => matrix[i + k]![j + k]!)
+      if i + n <= h && n - 1 <= j then
+        max := max.max $ prod $ [0:n].toArray |>.map (fun k => matrix[i + k]![j - k]!)
+  return max
+
+end PE.P11
+
+-- [#12 Highly divisible triangular number](https://projecteuler.net/problem=12)
+namespace PE.P12
+
+def factors (n : Nat) : Array (Nat × Nat) := Id.run do
+  let mut factors := #[]
+  let mut n := n
+  let mut p := 2
+  while p * p <= n do
+    let mut k := 0
+    while n % p == 0 do
+      k := k + 1
+      n := n / p
+    if k != 0 then
+      factors := factors.push (p, k)
+    p := p + 1
+  if n != 1 then
+    factors := factors.push (n, 1)
+  return factors
+
+def numDivisors n := factors n |>.foldl (fun (_, k) => (k + 1) * ·) 1
+
+def solve n := Id.run do
+  let mut x := 0
+  let mut y := 0
+  repeat
+    x := x + 1
+    y := y + x
+  until numDivisors y > n
+  return y
+
+end PE.P12
+
+-- [#13 Large sum](https://projecteuler.net/problem=13)
+namespace PE.P13
+
+def parse (lines : Array String) : Array Nat :=
+  lines.map (·.toNat!)
+
+def getDigits (n : Nat) : Array Nat := Id.run do
+  let mut n := n
+  let mut digits := #[]
+  while n != 0 do
+    digits := digits.push (n % 10)
+    n := n / 10
+  return digits
+
+def firstDigits k n := n / 10^((getDigits n).size - k)
+
+def solve (numbers : Array Nat) k := numbers |>.foldl (· + ·) 0 |> firstDigits k
+
+end PE.P13
+
+-- [#14 Longest Collatz sequence](https://projecteuler.net/problem=14)
+namespace PE.P14
+open Std
+
+def next (n : Nat) : Nat :=
+  if n % 2 == 0 then
+    n / 2
+  else
+    3 * n + 1
+
+abbrev M := StateM (HashMap Nat Nat)
+
+partial def solveRec (n : Nat) : M Nat := do
+  if let some res := (← get).find? n then
+    return res
+  else if n <= 1 then
+    return 1
+  else
+    let res := (← solveRec (next n)) + 1
+    modify (·.insert n res)
+    return res
+
+def solveAux (n : Nat) : M (Nat × Nat) := do
+  let mut max := (0, 0)
+  for x in [1:n] do
+    let len ← solveRec x
+    if max.1 < len then
+      max := (len, x)
+  return max
+
+def M.run (self : M α) : α := self.run' HashMap.empty
+
+def solve n := solveAux n |>.run |>.2
+
+end PE.P14
+
+-- [#15 Lattice paths](https://projecteuler.net/problem=15)
+namespace PE.P15
+open Std
+
+abbrev M := StateM (HashMap (Nat × Nat) Nat)
+def M.run (self : M α) : α := self.run' HashMap.empty
+
+partial def solveRec (i j : Nat) : M Nat := do
+  if let some res := (← get).find? (i, j) then
+    return res
+  else if i == 0 && j == 0 then
+    return 1
+  else
+    let mut res := 0
+    if i != 0 then
+      res := res + (← solveRec (i - 1) j)
+    if j != 0 then
+      res := res + (← solveRec i (j - 1))
+    modify (·.insert (i, j) res)
+    return res
+
+def solve n := solveRec n n |>.run
+
+end PE.P15
