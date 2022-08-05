@@ -298,3 +298,97 @@ partial def solveRec (i j : Nat) : M Nat := do
 def solve n := solveRec n n |>.run
 
 end PE.P15
+
+-- [#16 Power digit sum](https://projecteuler.net/problem=16)
+namespace PE.P16
+
+def solve n := P13.getDigits (2^n) |>.foldl (· + ·) 0
+
+end PE.P16
+
+-- [#17 Number letter counts](https://projecteuler.net/problem=17)
+namespace PE.P17
+
+def names₁ := #[
+  "","one","two","three","four","five","six","seven","eight","nine",
+  "ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen"]
+
+def names₂ := #["","","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"]
+
+def toEnglish2 (n : Nat) :=
+  if n < 20 then
+    names₁[n]!
+  else if n % 10 == 0 then
+    names₂[n / 10]!
+  else
+    s!"{names₂[n / 10]!} {names₁[n % 10]!}"
+
+def toEnglish3 (n : Nat) : String :=
+  if n < 100 then
+    toEnglish2 n
+  else if n % 100 == 0 then
+    s!"{names₁[n/100]!} hundred"
+  else
+    s!"{names₁[n/100]!} hundred and {toEnglish2 (n % 100)}"
+
+def toEnglish n := if n < 1000 then toEnglish3 n else "one thousand"
+
+def englishLen (n : Nat) : Nat :=
+  (toEnglish n).toList.filter (· != ' ') |>.length
+
+def solve n := [1:n+1].toArray.map englishLen |>.foldl (· + ·) 0
+
+end PE.P17
+
+-- [#18 Maximum path sum I](https://projecteuler.net/problem=18)
+namespace PE.P18
+open Std
+
+abbrev M := ReaderT (Array (Array Nat)) (StateM (HashMap (Nat × Nat) Nat))
+
+partial def solveRec (i j : Nat) : M Nat := do
+  let triangle ← read
+  if let some res := (← get).find? (i, j) then
+    return res
+  else if i >= triangle.size then
+    return 0
+  else
+    let res := triangle[i]![j]! + (← solveRec (i+1) j).max (← solveRec (i+1) (j+1))
+    modify (·.insert (i, j) res)
+    return res
+
+def solve triangle (_ : Nat) :=
+  ((solveRec 0 0).run triangle).run' HashMap.empty
+
+def parse (lines : Array String) : Array (Array Nat) :=
+  lines.map (·.split (· == ' ') |>.map (·.toNat!) |>.toArray)
+
+end PE.P18
+
+-- [#19 Counting Sundays](https://projecteuler.net/problem=19)
+namespace PE.P19
+
+def isLeapYear (y : Nat) := y % 4 == 0 && (y % 100 != 0 || y % 400 == 0)
+
+def monthDays y m :=
+  30 + (if m matches 2 | 4 | 6 | 9 | 11 then 0 else 1) -
+  (if m == 2 then (if isLeapYear y then 1 else 2) else 0)
+
+def solve lastYear := Id.run do
+  let mut res := 0
+  let mut dow := 1
+  for year in [1900:lastYear+1] do
+    for month in [1:12+1] do
+      if year >= 1901 && dow == 0 then
+        res := res + 1
+      dow := (dow + monthDays year month) % 7
+  return res
+
+end PE.P19
+
+-- [#20 Factorial digit sum](https://projecteuler.net/problem=20)
+namespace PE.P20
+
+def solve n := [1:n+1].toArray.foldl (· * ·) 1 |> P13.getDigits |>.foldl (· + ·) 0
+
+end PE.P20
