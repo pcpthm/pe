@@ -392,3 +392,101 @@ namespace PE.P20
 def solve n := [1:n+1].toArray.foldl (· * ·) 1 |> P13.getDigits |>.foldl (· + ·) 0
 
 end PE.P20
+
+-- [#21 Amicable numbers](https://projecteuler.net/problem=21)
+namespace PE.P21
+
+def sod₁ p k := (p^(k+1) - 1) / (p - 1)
+
+def sod n := P12.factors n |>.map (fun (p, k) => sod₁ p k) |>.foldl (· * ·) 1
+
+def solve n := Id.run do
+  let mut sum := 0
+  for a in [1:n+1] do
+    let b := sod a - a
+    if a != b && sod b - b == a then
+      sum := sum + a
+  return  sum
+
+end PE.P21
+
+-- [#22 Names scores](https://projecteuler.net/problem=22)
+namespace PE.P22
+
+def parse (lines : Array String) : Array String :=
+  lines[0]!.split (· == ',') |>.map (·.drop 1 |>.dropRight 1) |>.toArray
+
+def value (s : String) := s.toList.map (·.toNat - 'A'.toNat + 1) |>.foldr (· + ·) 0
+
+def solve (names : Array String) (_ : Nat) :=
+  names.qsort (· < ·) |>.mapIdx (fun i s => value s * (i.val + 1)) |>.foldl (· + ·) 0
+
+end PE.P22
+
+-- [#23 Non-abundant sums](https://projecteuler.net/problem=23)
+namespace PE.P23
+
+def solve n := Id.run do
+  let as := [1:n+1].toArray.filter (fun n => P21.sod n > n * 2)
+  let mut isA := mkArray (n+1) false
+  for a in as do
+    isA := isA.set! a true
+  let mut res := 0
+  for x in [1:n+1] do
+    let isSum := as.any (fun a => isA.getD (x - a) false)
+    if !isSum then
+      res := res + x
+  return res
+
+end PE.P23
+
+-- [#24 Lexicographic permutations](https://projecteuler.net/problem=24)
+namespace PE.P24
+
+def fnsToPerm (fns : Array Nat) : Array Nat := Id.run do
+  let n := fns.size
+  let mut perm := #[]
+  let mut used := mkArray n false
+  for i in [0:n] do
+    let mut k := fns[n - 1 - i]!
+    for x in [0:n] do
+      if !used[x]! then
+        if k == 0 then
+          used := used.set! x true
+          perm := perm.push x
+          break
+        k := k - 1    
+  return perm
+
+def rankToFns (n : Nat) (rank : Nat) : Array Nat := Id.run do
+  let mut fns := #[]
+  let mut k := rank
+  for i in [0:n] do
+    fns := fns.push (k % (i + 1))
+    k := k / (i + 1)
+  return fns
+
+def rankToPerm n rank := fnsToPerm (rankToFns n rank)
+
+def fromDigits (digits : Array Nat) : Nat :=
+  digits.foldl (· * 10 + ·) 0
+
+def solve (n : Nat) :=
+  let perm := rankToPerm 10 (n - 1)
+  fromDigits perm
+
+end PE.P24
+
+-- [#25 1000-digit Fibonacci number](https://projecteuler.net/problem=25)
+namespace PE.P25
+
+def solve (n : Nat) := Id.run do
+  let n := 10^(n-1)
+  let mut (a, b) := (0, 1)
+  let mut i := 0
+  while a < n do
+    (a, b) := (a + b, a)
+    i := i + 1
+  return i
+
+end PE.P25
