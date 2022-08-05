@@ -490,3 +490,108 @@ def solve (n : Nat) := Id.run do
   return i
 
 end PE.P25
+
+-- [#26 Reciprocal cycles](https://projecteuler.net/problem=26)
+namespace PE.P26
+
+def getCycleLength (n : Nat) := Id.run do
+  let mut used := mkArray n false
+  let mut len := 0
+  let mut r := 1
+  while !used[r]! do
+    used := used.set! r true
+    r := r * 10 % n
+    len := len + 1
+  return len
+
+def solve (n : Nat) := Id.run do
+  let mut max := (0, 0)
+  for x in [2:n] do
+    if x % 2 == 0 || x % 5 == 0 then
+      continue
+    let len := getCycleLength x
+    if max.fst < len then
+      max := (len, x)
+  return max.snd
+
+end PE.P26
+
+-- [#27 Quadratic primes](https://projecteuler.net/problem=27)
+namespace PE.P27
+
+def isPrime (n : Nat) : Bool := Id.run do
+  let mut p := 2
+  while p * p <= n do
+    if n % p == 0 then
+      return false
+    p := p + 1
+  return n > 1
+
+partial def getNumConsecutivePrimes (a b : Int) : Nat :=
+  let rec loop (n : Int) :=
+    let y: Int := n^2 + a * n + b
+    if 0 <= y && isPrime y.toNat then
+      1 + loop (n + 1)
+    else
+      0
+  loop 0
+
+def solve (limit : Nat) : Int := Id.run do
+  let primes := [2:limit+1].toArray.filter isPrime
+  let mut max := (0, 0)
+  let mut a: Int := -Int.ofNat limit + 1
+  while a < limit do
+    for b in primes do
+      let num := getNumConsecutivePrimes a b
+      if max.fst < num then
+        max := (num, a * b)
+    a := a + 1
+  return max.snd
+
+end PE.P27
+
+-- [#28 Number spiral diagonals](https://projecteuler.net/problem=28)
+namespace PE.P28
+
+def solve (n : Nat) := Id.run do
+  let mut sum := 1
+  let mut start := 2
+  for k in [1:n/2+1] do
+    let len := k * 2 + 1
+    let num := len^2 - (len-2)^2
+    for i in #[len - 2, len * 2 - 3, len * 3 - 4, num - 1] do
+      sum := sum + (start + i)
+    start := start + num
+  return sum
+
+end PE.P28
+
+-- [#29 Distinct powers](https://projecteuler.net/problem=29)
+namespace PE.P29
+open Std (HashSet)
+
+def solve (n : Nat) := Id.run do
+  let mut set := HashSet.empty
+  for a in [2:n+1] do
+    let as := P12.factors a
+    for b in [2:n+1] do
+      let pow := as.map (fun (p, k) => (p, k * b))
+      set := set.insert pow
+  return set.size
+
+end PE.P29
+
+-- [#30 Digit fifth powers](https://projecteuler.net/problem=30)
+namespace PE.P30
+
+def solve (n : Nat) := Id.run do
+  let mut len := 2
+  let mut sum := 0
+  while 10^(len-1) <= 9^n * len do
+    for x in [10^(len-1):10^len] do
+      if (P13.getDigits x |>.map (· ^ n) |>.foldl (· + ·) 0) == x then
+        sum := sum + x
+    len := len + 1
+  return sum
+
+end PE.P30

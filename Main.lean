@@ -8,7 +8,7 @@ open Lean.Elab.Term
 class Answer (α : Type) where
   toString : α → IO String
 
-def problemNumbers := [1:25+1].toArray
+def problemNumbers := [1:30+1].toArray
 
 elab "getAnswerMatch%" : term => do
   let mut alts := #[]
@@ -21,19 +21,21 @@ elab "getAnswerMatch%" : term => do
       `($(mkIdent solve) ($(mkIdent parse):ident lines) input)
     else
       `($(mkIdent solve) input)
-    alts := alts.push $ ← `(matchAltExpr| | $n => $value)
+    alts := alts.push $ ← `(matchAltExpr| | $n => toString $value)
   alts := alts.push $ ← `(matchAltExpr| | _ => panic! "Not implemented")
   let stx ← `(fun n lines input => match n with $alts:matchAlt*)
   return ← elabTerm stx none
 
-def getAnswer : Nat → Array String → Nat → Nat := getAnswerMatch%
+def getAnswer : Nat → Array String → Nat → String := getAnswerMatch%
 
 def main : IO Unit := do
   let inputs ← (·.map (·.toNat!)) <$> IO.FS.lines ("data" / "input.txt")
   for n in problemNumbers do
+    let time ← IO.monoMsNow
     let lines ← try
       IO.FS.lines ("data" / s!"p{n}.txt")
       catch _ => pure #[]
     let input := inputs[n-1]!
     let answer := getAnswer n lines input
     println! "Problem {n}: {answer}"
+    (← IO.getStderr).putStr s!"{(← IO.monoMsNow) - time}ms\n"
