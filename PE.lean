@@ -730,3 +730,131 @@ def solve (n : Nat) := Id.run do
   return num
 
 end PE.P35
+
+-- [#36 Double-base palindromes](https://projecteuler.net/problem=36)
+namespace PE.P36
+
+def reverseDigits (base : Nat) (n : Nat) := Id.run do
+  let mut res := 0
+  let mut n := n
+  while n > 0 do
+    res := res * base + n % base
+    n := n / base
+  return res
+
+def solve (n : Nat) := Id.run do
+  let mut sum := 0
+  let mut halfLen := 1
+  while 10^(halfLen * 2 - 2) < n do
+    for half in [10^(halfLen-1):10^halfLen] do
+      let pal1 := half * 10^(halfLen-1) + reverseDigits 10 (half / 10)
+      let pal2 := half * 10^halfLen + reverseDigits 10 half
+      for pal in #[pal1, pal2] do
+        if pal < n && reverseDigits 2 pal == pal then
+          sum := sum + pal
+    halfLen := halfLen + 1
+  return sum
+
+end PE.P36
+
+-- [#37 Truncatable primes](https://projecteuler.net/problem=37)
+namespace PE.P37
+
+def isRightTruncPrime n := Id.run do
+  let mut tens := 10
+  while tens <= n do
+    if !P27.isPrime (n % tens) then
+      return false
+    tens := tens * 10
+  return true
+
+partial def solveRec (cur : Nat) : Nat := Id.run do
+  if cur != 0 && !P27.isPrime cur then
+    return 0
+  let mut res := 0
+  if cur >= 10 && isRightTruncPrime cur then
+    res := res + cur
+  for d in [1:10] do
+    res := res + solveRec (cur * 10 + d)
+  return res
+
+def solve (n : Nat) := solveRec 0 |>.max n -- max is only for using the input
+
+end PE.P37
+
+-- [#38 Pandigital multiples](https://projecteuler.net/problem=38)
+namespace PE.P38
+
+def solve (n : Nat) := Id.run do
+  let mut max := 0
+  for len in [1:9/2+1] do
+    for a in [10^(len-1):10^len] do
+      let mut mul := a
+      let mut digits := #[]
+      while digits.size < 9 do
+        digits := digits.append (P13.getDigits mul).reverse
+        mul := mul + a
+      if digits.size == 9 && digits.qsort (· < ·) == #[1,2,3,4,5,6,7,8,9] then
+        let num := digits.foldl (· * 10 + ·) 0
+        max := max.max num
+  return max.max n -- max is only for using the input
+
+end PE.P38
+
+-- [#39 Integer right triangles](https://projecteuler.net/problem=39)
+namespace PE.P39
+open Std (HashMap)
+
+-- Ref: [Tree of primitive Pythagorean triples - Wikipedia](https://en.wikipedia.org/wiki/Tree_of_primitive_Pythagorean_triples)
+partial def ptTree (bound : Nat) (m n : Nat) : StateM (Array (Nat × Nat × Nat)) Unit := do
+  if m^2 + n^2 <= bound then
+    modify (·.push (m^2 - n^2, 2 * m * n, m^2 + n^2))
+    ptTree bound (m * 2 - n) m
+    ptTree bound (m * 2 + n) m
+    ptTree bound (m + n * 2) n
+
+def enumPPT bound := ptTree bound 2 1 |>.run #[] |>.snd
+
+def enumPT bound := Id.run do
+  let mut res := #[]
+  for (a, b, c) in enumPPT bound do
+    for f in [1:bound/5+1] do
+      res := res.push (a * f, b * f, c * f)
+  return res
+
+def solve (n : Nat) := Id.run do
+  let mut count := HashMap.empty
+  for (a, b, c) in enumPT n do
+    let p := a + b + c
+    if p <= n then
+      count := count.insert p ((count.find? p).getD 0 + 1)
+  let mut max := (0, 0)
+  for (p, k) in count.toArray do
+    if max.fst < k then
+      max := (k, p)
+  return max.snd
+
+end PE.P39
+
+-- [#40 Champernowne's constant](https://projecteuler.net/problem=40)
+namespace PE.P40
+
+def getDigit (k : Nat) := Id.run do
+  let mut k := k
+  let mut len := 1
+  repeat
+    let total := len * (10^len - 10^(len-1))
+    if k < total then
+      break
+    k := k - total
+    len := len + 1
+  let num := 10^(len-1) + k / len
+  return (P13.getDigits num)[len - 1 - k % len]!
+
+def solve (n : Nat) := Id.run do
+  let mut prod := 1
+  for k in [0:n+1] do
+    prod := prod * getDigit (10^k - 1)
+  return prod
+
+end PE.P40
