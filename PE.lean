@@ -858,3 +858,138 @@ def solve (n : Nat) := Id.run do
   return prod
 
 end PE.P40
+
+-- [#41 Pandigital prime](https://projecteuler.net/problem=41)
+namespace PE.P41
+
+def nextPermutationAux (perm : Array Nat) : Nat × Nat := Id.run do
+  let mut i := perm.size
+  while i > 1 && perm[i - 2]! >= perm[i - 1]! do
+    i := i - 1
+  if i <= 1 then
+    return (perm.size, perm.size)
+  let mut j := perm.size - 1
+  while perm[i - 2]! >= perm[j]! do
+    j := j - 1
+  return (i - 2, j)
+
+def applySwapRev (perm : Array Nat) (i j : Nat) := Id.run do
+  let mut perm := perm.swap! i j
+  let mut i := i + 1
+  let mut k := perm.size - 1
+  while i < k do
+    perm := perm.swap! i k
+    i := i + 1
+    k := k - 1
+  return perm
+
+structure Permutations where
+  cur : Array Nat
+
+partial instance : ForIn m Permutations (Array Nat) where
+  forIn start b f :=
+    let rec loop cur b := do
+      match ← f cur b with
+      | .done b => return b
+      | .yield b =>
+        let (i, j) := nextPermutationAux cur
+        if i < cur.size then
+          let next := applySwapRev cur i j
+          loop next b
+        else
+          return b
+    loop start.cur b
+
+def solve (n : Nat) := Id.run do
+  let mut max := 0
+  for len in [2:n+1] do
+    for perm in Permutations.mk [1:len+1].toArray do
+      if perm[0]! % 2 == 0 then
+        continue
+      let num := perm.foldr (· + · * 10) 0
+      if P27.isPrime num then
+        max := max.max num
+  return max
+
+end PE.P41
+
+-- [#42 Coded triangle numbers](https://projecteuler.net/problem=42)
+namespace PE.P42
+open Std (HashSet)
+
+def parse := P22.parse
+
+def solve (words: Array String) (_ : Nat) := Id.run do
+  let values := words.map P22.value
+  let maxValue := values.foldl Nat.max 0
+  let mut set := HashSet.empty
+  let mut cur := 1
+  let mut i := 2
+  while cur <= maxValue do
+    set := set.insert cur
+    cur := cur + i
+    i := i + 1
+  return values.filter (set.contains ·) |>.size
+
+end PE.P42
+
+-- [#43 Sub-string divisibility](https://projecteuler.net/problem=43)
+namespace PE.P43
+
+partial def solveRec (n : Nat) (i : Nat) (cur : Nat) (used : Nat) : Nat := Id.run do
+  if i >= 3 then
+    let m := #[17,13,11,7,5,3,2,1][i-3]!
+    if cur / 10^(i-3) % m != 0 then
+      return 0
+  if i == n then
+    return cur
+  let mut sum := 0
+  for d in [0:10] do
+    if used &&& (1 <<< d) != 0 then
+      continue
+    if i + 1 == n && d == 0 then
+      continue
+    sum := sum + solveRec n (i + 1) (cur + d * 10^i) (used ||| (1 <<< d))
+  return sum
+
+def solve (n : Nat) : Nat := solveRec n 0 0 0
+
+end PE.P43
+
+-- [#44 Pentagon numbers](https://projecteuler.net/problem=44)
+namespace PE.P44
+open Std (HashSet)
+
+-- n must be a some large number
+def solve (n : Nat) := Id.run do
+  let ps := [1:n].toArray.map (fun n => n * (3 * n - 1) / 2)
+  let set := ps.foldl (·.insert ·) HashSet.empty
+  for d in ps do
+    let mut preva := 0
+    for a in ps do
+      if a - preva > d then
+        break
+      preva := a
+      let b := a + d
+      if set.contains b then
+        if set.contains (a + b) then
+          return d
+  return 0
+
+end PE.P44
+
+-- [#45 Triangular, pentagonal, and hexagonal](https://projecteuler.net/problem=45)
+namespace PE.P45
+open Std (HashSet)
+
+-- n must be a some large number
+def solve n := Id.run do
+  let ts := [1:n].toArray.map (fun n => n * (n + 1) / 2) |>.foldl (·.insert ·) HashSet.empty
+  let ps := [1:n].toArray.map (fun n => n * (3 * n - 1) / 2) |>.foldl (·.insert ·) HashSet.empty
+  for a in [2:n] do
+    let x := a * (2 * a - 1)
+    if 40755 < x && ts.contains x && ps.contains x then
+      return x
+  return 0
+
+end PE.P45
