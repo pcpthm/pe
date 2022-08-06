@@ -993,3 +993,124 @@ def solve n := Id.run do
   return 0
 
 end PE.P45
+
+-- [#46 Goldbach's other conjecture](https://projecteuler.net/problem=46)
+namespace PE.P46
+open Std (HashSet)
+
+-- n must be a some large number
+def solve (n : Nat) := Id.run do
+  let isPrime := P7.sieve n |>.foldl (·.insert ·) HashSet.empty
+  for x in [1:n/2] do
+    let x := 2 * x + 1
+    if isPrime.contains x then
+      continue
+    let mut k := 1
+    let mut ok := false
+    repeat
+      let a := 2 * k^2
+      if a > x then
+        break
+      if isPrime.contains (x - a) then
+        ok := true
+        break
+      k := k + 1
+    unless ok do
+      return x
+  return 0
+
+end PE.P46
+
+-- [#47 Distinct primes factors](https://projecteuler.net/problem=47)
+namespace PE.P47
+open Std (HashSet)
+
+def sieve (n : Nat) : Array Nat := Id.run do
+  let mut num := mkArray (n+1) 0
+  for p in [2:n+1] do
+    if num[p]! == 0 then
+      let mut m := p
+      while m <= n do
+        num := num.set! m (num[m]! + 1)
+        m := m + p
+  return num
+
+-- n must be a some large number
+def solve (n : Nat) := Id.run do
+  let num := sieve n
+  for a in [2:n-4+1] do
+    if num[a]! == 4 && num[a+1]! == 4 && num[a+2]! == 4 && num[a+3]! == 4 then
+      return a
+  return 0
+
+end PE.P47
+
+-- Workaround Nat.mod bug <https://github.com/leanprover/lean4/issues/1433>
+instance (priority := high) : HMod Nat Nat Nat where
+  hMod a b := a - a / b * b
+
+-- [#48 Self powers](https://projecteuler.net/problem=48)
+namespace PE.P48
+
+partial def powModAux (m x y acc : Nat) : Nat :=
+  if y == 0 then
+    acc
+  else if y % 2 == 0 then
+    powModAux m (x^2 % m) (y / 2) acc
+  else
+    powModAux m (x^2 % m) (y / 2) (acc * x % m)
+
+def powMod m x y := powModAux m x y (1 % m)
+
+def solve (n : Nat) :=
+  let mod := 10^10
+  [1:n+1].toArray.map (fun x => powMod mod x x) |>.foldl (fun a b => (a + b) % mod) 0
+
+end PE.P48
+
+-- [#49 Prime permutations](https://projecteuler.net/problem=49)
+namespace PE.P49
+open Std (HashSet)
+
+def digitSet n := P13.getDigits n |>.qsort (· < ·)
+
+def solve (n : Nat) := Id.run do
+  let mut primes := P7.sieve (10^n-1) |>.filter (10^(n-1) <= ·)
+  let mut isPrime := primes.foldl (·.insert ·) HashSet.empty
+  for p in primes do
+    let digits := digitSet p
+    for q in primes do
+      if p >= q then
+        continue
+      if digitSet q != digits then
+        continue
+      let r := q + (q - p)
+      if isPrime.contains r && digitSet r == digits then
+        let num := p * 10^(n*2) + q * 10^n + r
+        if num != 148748178147 then
+          return num
+  return 0
+
+end PE.P49
+
+-- [#50 Consecutive prime sum](https://projecteuler.net/problem=50)
+namespace PE.P50
+open Std (HashSet)
+
+def solve n := Id.run do
+  let mut primes := P7.sieve n
+  let mut isPrime := primes.foldl (·.insert ·) HashSet.empty
+  let mut prefixSum := #[0]
+  for i in [0:primes.size] do
+    prefixSum := prefixSum.push (prefixSum[i]! + primes[i]!)
+  let mut max := (0, 0)
+  for len in [2:primes.size+1] do
+    for i in [0:primes.size+1-len] do
+      let sum := prefixSum[i+len]! - prefixSum[i]!
+      if sum >= n then
+        break
+      if isPrime.contains sum then
+        max := (len, sum)
+  return max.snd
+
+end PE.P50

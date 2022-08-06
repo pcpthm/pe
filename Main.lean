@@ -8,7 +8,7 @@ open Lean.Elab.Term
 class Answer (α : Type) where
   toString : α → IO String
 
-def problemNumbers := [1:45+1].toArray
+def problemNumbers := [1:50+1].toArray
 
 elab "getAnswerMatch%" : term => do
   let mut alts := #[]
