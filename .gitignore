@@ -2,3 +2,4 @@
 /lean_packages/*
 !/lean_packages/manifest.json
 /output.txt
+/perf.data*
